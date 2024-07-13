@@ -9,12 +9,12 @@
 #include "DHT.h"
 #define DHTPIN 15
 #define DHTTYPE DHT22
-#define LOOPTIME 5000 // Five Sec
+#define LOOPTIME 60 * 5000 // Five Minutes
+
 #define NTPSERVER "id.pool.ntp.org"
  
-#define AWS_IOT_PUBLISH_TOPIC   "esp32/pub"
+#define AWS_IOT_PUBLISH_TOPIC   "dev/dht"
 #define AWS_IOT_SUBSCRIBE_TOPIC "esp32/sub"
-
  
 float h;
 float t;
@@ -81,12 +81,6 @@ void connectAWS()
   Serial.println("AWS IoT Connected!");
 }
 
-void printLocalTime()
-{
-  struct tm timeinfo;
-  if (!getLocalTime(&timeinfo));
-}
-
 void publishMessage()
 {
   Serial.println("Publishing message to AWS IoT Core...");
@@ -110,7 +104,7 @@ void publishMessage()
   int minu = timeClient.getMinutes();
   int sece = timeClient.getSeconds();
 
-  String t = String(currentYear) + "-" + 
+  String time = String(currentYear) + "-" + 
              (currentMonth < 10 ? "0" : "") + String(currentMonth) + "-" + 
              (monthDay < 10 ? "0" : "") + String(monthDay) + "T" + 
              (hours < 10 ? "0" : "") + String(hours) + ":" + 
@@ -123,7 +117,7 @@ void publishMessage()
     --- Ends Here ---
   */
 
-  doc["timestamp"] = t;
+  doc["timestamp"] = time;
   doc["origin"] = THINGNAME;
   doc["humidity"] = h;
   doc["temperature"] = t;
@@ -167,6 +161,12 @@ void loop()
   Serial.print(F("%  Temperature: "));
   Serial.print(t);
   Serial.println(F("°C "));
+
+  if (!client.connected()) {
+    Serial.println("Disconnected...");
+    Serial.println("Reconnecting...");
+    connectAWS();
+  }
  
   publishMessage();
   client.loop();
